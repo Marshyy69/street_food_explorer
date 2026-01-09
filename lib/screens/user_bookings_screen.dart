@@ -8,19 +8,25 @@ class UserBookingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    final theme = Theme.of(context);
 
     if (user == null) return const Center(child: Text("Please login first"));
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("My Packages"), 
-        backgroundColor: Colors.white, 
-        foregroundColor: Colors.black,
-        elevation: 0,
-        automaticallyImplyLeading: false, // Hide back button if using bottom nav
+        backgroundColor: theme.colorScheme.primary, // Brown Header
+        foregroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        title: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.confirmation_number, color: Colors.white), // Ticket Icon
+            SizedBox(width: 10),
+            Text("My Bookings", style: TextStyle(color: Colors.white)),
+          ],
+        ),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        // FILTER: Only show bookings for this user ID
         stream: FirebaseFirestore.instance
             .collection('bookings')
             .where('userId', isEqualTo: user.uid) 
@@ -28,17 +34,30 @@ class UserBookingsScreen extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator(color: theme.colorScheme.primary));
           }
           
+          // --- BEAUTIFUL EMPTY STATE ---
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.airplane_ticket_outlined, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text("No bookings yet!", style: TextStyle(color: Colors.grey)),
+                  Container(
+                    padding: const EdgeInsets.all(30),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50], // Orange tint for bookings
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.airplane_ticket_outlined, size: 80, color: Colors.orange[300]),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    "No bookings yet",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.brown[800]),
+                  ),
+                  const SizedBox(height: 8),
+                  Text("Your culinary adventure awaits!", style: TextStyle(color: Colors.brown[400])),
                 ],
               ),
             );
@@ -55,11 +74,12 @@ class UserBookingsScreen extends StatelessWidget {
               if (data['status'] == 'Cancelled') statusColor = Colors.red;
               
               return Card(
-                elevation: 2,
+                elevation: 4,
+                shadowColor: Colors.brown.withOpacity(0.2),
                 margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -69,14 +89,15 @@ class UserBookingsScreen extends StatelessWidget {
                           Expanded(
                             child: Text(
                               data['foodName'] ?? 'Tour',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: theme.colorScheme.primary),
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
                               color: statusColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: statusColor.withOpacity(0.5)),
                             ),
                             child: Text(
                               data['status'] ?? 'Confirmed',
@@ -85,14 +106,28 @@ class UserBookingsScreen extends StatelessWidget {
                           )
                         ],
                       ),
-                      const Divider(height: 24),
-                      Text("Package: ${data['packageType']}"),
-                      Text("Date/Time: ${data['mealTime']}"),
-                      Text("Participants: ${data['participants']} pax"),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Total Paid: RM ${data['totalPrice']?.toStringAsFixed(2)}",
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange),
+                      const Divider(height: 24, thickness: 1),
+                      _buildInfoRow(Icons.card_giftcard, "Package", data['packageType']),
+                      _buildInfoRow(Icons.calendar_today, "Session", data['mealTime']),
+                      _buildInfoRow(Icons.people, "Pax", "${data['participants']} people"),
+                      
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[50],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text("Total Paid", style: TextStyle(color: Colors.brown[700])),
+                            Text(
+                              "RM ${data['totalPrice']?.toStringAsFixed(2)}",
+                              style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.secondary, fontSize: 18),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -101,6 +136,20 @@ class UserBookingsScreen extends StatelessWidget {
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey),
+          const SizedBox(width: 8),
+          Text("$label: ", style: const TextStyle(color: Colors.grey)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ],
       ),
     );
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_screen.dart'; // To reuse the FoodCard
+import 'home_screen.dart'; 
 import 'food_details_screen.dart';
 
 class SavedScreen extends StatelessWidget {
@@ -10,20 +10,28 @@ class SavedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    final theme = Theme.of(context);
 
     if (user == null) {
-      return const Scaffold(body: Center(child: Text("Please log in to view saved items.")));
+      return const Scaffold(body: Center(child: Text("Please log in first.")));
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Saved Favorites"),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        // Colored Header
+        backgroundColor: theme.colorScheme.primary, 
+        foregroundColor: Colors.white, // White text
         elevation: 0,
         automaticallyImplyLeading: false,
+        title: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.favorite, color: Colors.white), // Header Icon
+            SizedBox(width: 10),
+            Text("My Favorites", style: TextStyle(color: Colors.white)),
+          ],
+        ),
       ),
-      // We look into 'users/{uid}/favorites' to get the saved list
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
@@ -32,17 +40,30 @@ class SavedScreen extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator(color: theme.colorScheme.primary));
           }
 
+          // --- BEAUTIFUL EMPTY STATE ---
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.favorite_border, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text("No favorites yet. Go save some food!", style: TextStyle(color: Colors.grey)),
+                  Container(
+                    padding: const EdgeInsets.all(30),
+                    decoration: BoxDecoration(
+                      color: Colors.brown[50],
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.favorite_border, size: 80, color: Colors.brown[300]),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    "No favorites yet",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.brown[800]),
+                  ),
+                  const SizedBox(height: 8),
+                  Text("Mark items with a ♥ to find them here!", style: TextStyle(color: Colors.brown[400])),
                 ],
               ),
             );
@@ -50,35 +71,26 @@ class SavedScreen extends StatelessWidget {
 
           final docs = snapshot.data!.docs;
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
+          return ListView.separated(
+            padding: const EdgeInsets.all(20),
             itemCount: docs.length,
+            separatorBuilder: (ctx, i) => const SizedBox(height: 20),
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
               
-              // Reuse your FoodCard widget!
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: FoodCard(
-                  title: data['name'] ?? '',
-                  subtitle: data['location'] ?? '',
-                  rating: data['rating'] ?? '5.0',
-                  price: data['price'] ?? '',
-                  imageUrl: data['imageUrl'] ?? '',
-                  primaryColor: Colors.deepOrange,
-                  onTap: () {
-                    // Navigate to details when clicked
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => FoodDetailsScreen(
-                          foodData: data, 
-                          docId: docs[index].id // Pass the ID so the heart icon works
-                        )
-                      ),
-                    );
-                  },
-                ),
+              return FoodCard(
+                data: data,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => FoodDetailsScreen(
+                        foodData: data, 
+                        docId: docs[index].id 
+                      )
+                    ),
+                  );
+                },
               );
             },
           );

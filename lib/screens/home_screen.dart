@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'food_details_screen.dart';
-import 'user_bookings_screen.dart'; 
-import 'profile_screen.dart';     
+import 'user_bookings_screen.dart';
 import 'saved_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,66 +15,44 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  // --- 1. Define the Pages for the Bottom Nav ---
   final List<Widget> _pages = [
-    const HomeContent(),        // Extracted Home Logic (Search + List)
-    const UserBookingsScreen(), // The "My Packages" screen
-    const SavedScreen(),   // Placeholder for "Saved"
-    const ProfileScreen(),      // The Profile/Logout screen
+    const HomeContent(),
+    const UserBookingsScreen(),
+    const SavedScreen(),
+    const ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = Colors.deepOrange;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      // The body switches based on the selected index
       body: _pages[_selectedIndex],
-
-      // --- 2. Bottom Navigation Bar ---
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
+            BoxShadow(color: Colors.brown.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, -5)),
           ],
         ),
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
-          selectedItemColor: primaryColor,
+          selectedItemColor: theme.colorScheme.primary, // Brown
           unselectedItemColor: Colors.grey[400],
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
           elevation: 0,
           items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.confirmation_number_rounded),
-              label: 'Packages',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_rounded),
-              label: 'Saved',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_rounded),
-              label: 'Profile',
-            ),
+            BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explore'),
+            BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Bookings'),
+            BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Saved'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
         ),
       ),
@@ -82,7 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// --- 3. The Main Home Tab (Search + Food List) ---
 class HomeContent extends StatefulWidget {
   const HomeContent({super.key});
 
@@ -93,257 +70,173 @@ class HomeContent extends StatefulWidget {
 class _HomeContentState extends State<HomeContent> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
-  final Color primaryColor = Colors.deepOrange;
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false, // Don't show back button on Home
-        title: Text(
-          'StreetFood Explorer',
-          style: TextStyle(
-            color: primaryColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
+      backgroundColor: const Color(0xFFFDFBF7), // Cream background
+      body: Column(
+        children: [
+          // --- CUSTOM HEADER ---
+          Container(
+            padding: const EdgeInsets.only(top: 60, left: 20, right: 20, bottom: 30),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary, // Heritage Brown
+              borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
+              boxShadow: [BoxShadow(color: Colors.brown.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))],
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('StreetFood Explorer', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                        const SizedBox(height: 4),
+                        Text("Discover authentic flavors", style: TextStyle(fontSize: 14, color: Colors.orange[100])),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                      child: const Icon(Icons.notifications_outlined, color: Colors.white),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 25),
+                // Search Bar
+                TextField(
+                  controller: _searchController,
+                  onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+                  style: const TextStyle(color: Colors.black87),
+                  decoration: InputDecoration(
+                    hintText: "Search nasi lemak, satay...",
+                    hintStyle: TextStyle(color: Colors.grey[500]),
+                    prefixIcon: Icon(Icons.search, color: theme.colorScheme.primary),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                    suffixIcon: _searchQuery.isNotEmpty 
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 20, color: Colors.grey),
+                          onPressed: () { _searchController.clear(); setState(() => _searchQuery = ""); },
+                        )
+                      : null,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: Colors.black87),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // --- Search Bar ---
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 2,
-                    blurRadius: 5,
-                    offset: const Offset(0, 3),
+
+          // --- BODY CONTENT ---
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Icon(Icons.local_fire_department, color: theme.colorScheme.secondary, size: 24),
+                      const SizedBox(width: 8),
+                      Text("Popular Near You", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  Expanded(
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance.collection('foods').snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+                        final allDocs = snapshot.data!.docs;
+                        final filteredDocs = allDocs.where((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          final name = (data['name'] ?? '').toString().toLowerCase();
+                          return name.contains(_searchQuery);
+                        }).toList();
+
+                        if (filteredDocs.isEmpty) return Center(child: Text("No food found.", style: TextStyle(color: Colors.brown[300])));
+
+                        return ListView.separated(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          itemCount: filteredDocs.length,
+                          separatorBuilder: (ctx, i) => const SizedBox(height: 20),
+                          itemBuilder: (context, index) {
+                            final data = filteredDocs[index].data() as Map<String, dynamic>;
+                            return FoodCard(
+                              data: data,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => FoodDetailsScreen(foodData: data, docId: filteredDocs[index].id),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value.toLowerCase();
-                  });
-                },
-                decoration: InputDecoration(
-                  hintText: 'Search Malaysian Street Food',
-                  hintStyle: TextStyle(color: Colors.grey[400]),
-                  prefixIcon: Icon(Icons.search, color: primaryColor),
-                  suffixIcon: _searchQuery.isNotEmpty 
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.grey),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = "");
-                        },
-                      )
-                    : null,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 15),
-                ),
-              ),
             ),
-            const SizedBox(height: 24),
-
-            // --- Section Header ---
-            const Text(
-              "Popular Near You",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // --- Dynamic Food List ---
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('foods').snapshots(),
-                builder: (context, snapshot) {
-                  // Loading
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator(color: primaryColor));
-                  }
-                  // Error
-                  if (snapshot.hasError) {
-                    return const Center(child: Text("Error loading foods."));
-                  }
-                  // Empty
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text("No food items found."));
-                  }
-
-                  // Filtering Logic
-                  final allDocs = snapshot.data!.docs;
-                  final filteredDocs = allDocs.where((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    final name = (data['name'] ?? '').toString().toLowerCase();
-                    return name.contains(_searchQuery);
-                  }).toList();
-
-                  if (filteredDocs.isEmpty) {
-                    return const Center(child: Text("No matching foods found."));
-                  }
-
-                  return ListView.builder(
-                    itemCount: filteredDocs.length,
-                    itemBuilder: (context, index) {
-                      final data = filteredDocs[index].data() as Map<String, dynamic>;
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: FoodCard(
-                          title: data['name'] ?? 'Unknown Food',
-                          subtitle: data['location'] ?? 'Unknown Location',
-                          rating: data['rating'] ?? 'N/A',
-                          price: data['price'] ?? 'RM 0',
-                          imageUrl: data['imageUrl'] ?? '',
-                          primaryColor: primaryColor,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => FoodDetailsScreen(foodData: data),
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// --- 4. Placeholder for Saved Screen ---
-class SavedPlaceholder extends StatelessWidget {
-  const SavedPlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Saved Favorites"), 
-        backgroundColor: Colors.white, 
-        foregroundColor: Colors.black, 
-        elevation: 0,
-        automaticallyImplyLeading: false,
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.favorite_border, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text("No saved items yet.", style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// --- 5. Custom Food Card Widget ---
 class FoodCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String rating;
-  final String price;
-  final String imageUrl;
-  final Color primaryColor;
+  final Map<String, dynamic> data;
   final VoidCallback onTap;
 
-  const FoodCard({
-    super.key,
-    required this.title,
-    required this.subtitle,
-    required this.rating,
-    required this.price,
-    required this.imageUrl,
-    required this.primaryColor,
-    required this.onTap,
-  });
+  const FoodCard({super.key, required this.data, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    // Extract ingredients logic
+    final List<dynamic> ingredients = data['ingredients'] ?? [];
+    String ingredientsText = ingredients.take(3).join(", "); // Take first 3
+    if (ingredients.length > 3) ingredientsText += "...";
+    if (ingredientsText.isEmpty) ingredientsText = "Authentic local ingredients";
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.brown.withOpacity(0.08), spreadRadius: 2, blurRadius: 15, offset: const Offset(0, 6))],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Image Section
+              // Image
               ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
+                borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
                 child: Image.network(
-                  imageUrl,
-                  height: 150,
+                  data['imageUrl'] ?? '',
+                  height: 160,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 150, 
-                      color: Colors.grey[200], 
-                      child: const Center(
-                        child: Icon(Icons.fastfood, color: Colors.grey, size: 40)
-                      )
-                    );
-                  },
+                  errorBuilder: (c,e,s) => Container(height: 160, color: Colors.brown[50], child: Icon(Icons.fastfood, color: Colors.brown[200], size: 50)),
                 ),
               ),
               
-              // Details Section
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -353,72 +246,43 @@ class FoodCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: Colors.black87,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                subtitle,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
+                          child: Text(data['name'] ?? 'Unknown', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.brown[900]), overflow: TextOverflow.ellipsis),
                         ),
-                        // Rating Badge
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.amber[100],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(color: Colors.orange[50], borderRadius: BorderRadius.circular(20)),
                           child: Row(
                             children: [
-                              const Icon(Icons.star, size: 14, color: Colors.amber),
+                              const Icon(Icons.star_rounded, size: 16, color: Colors.orange),
                               const SizedBox(width: 4),
-                              Text(
-                                rating,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
+                              Text(data['rating'] ?? '5.0', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.brown[800], fontSize: 12)),
                             ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    
-                    // Price and Button Row
+                    const SizedBox(height: 8),
+                    // Location
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          price,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                            color: primaryColor,
-                          ),
-                        ),
-                        const Text(
-                          'View Details',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
+                        Icon(Icons.location_on, size: 14, color: Colors.brown[400]),
+                        const SizedBox(width: 4),
+                        Text(data['location'] ?? 'Unknown', style: TextStyle(color: Colors.brown[400], fontSize: 13)),
+                        const Spacer(),
+                        Text(data['price'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).colorScheme.secondary)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    // NEW: Ingredients Preview
+                    Row(
+                      children: [
+                        Icon(Icons.restaurant_menu, size: 14, color: Colors.grey[400]),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            "Contains: $ingredientsText", 
+                            style: TextStyle(color: Colors.grey[500], fontSize: 12, fontStyle: FontStyle.italic),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

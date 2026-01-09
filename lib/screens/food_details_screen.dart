@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Needed for User ID
+import 'package:firebase_auth/firebase_auth.dart';
 import 'user_input_screen.dart';
 
 class FoodDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> foodData;
-  // We need the Doc ID to identify the food uniquely in the database
   final String? docId; 
 
-  // Update constructor to accept docId (optional but recommended)
   const FoodDetailsScreen({super.key, required this.foodData, this.docId});
 
   @override
@@ -18,7 +16,7 @@ class FoodDetailsScreen extends StatefulWidget {
 class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
   int _quantity = 1;
   double _basePrice = 0.0;
-  bool _isFavorite = false; // State to track heart icon
+  bool _isFavorite = false;
   final User? user = FirebaseAuth.instance.currentUser;
 
   @override
@@ -26,68 +24,44 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
     super.initState();
     String priceString = widget.foodData['price'] ?? '10';
     _basePrice = double.tryParse(priceString.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 10.0;
-    
-    _checkIfFavorite(); // Check status on load
+    _checkIfFavorite();
   }
 
-  // 1. Check if this food is already in favorites
   void _checkIfFavorite() async {
     if (user == null) return;
-    
-    // Use the food Name as ID if docId is missing (fallback for your current setup)
     String foodId = widget.docId ?? widget.foodData['name'];
-
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user!.uid)
-        .collection('favorites')
-        .doc(foodId)
-        .get();
-
-    if (mounted) {
-      setState(() {
-        _isFavorite = doc.exists;
-      });
-    }
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).collection('favorites').doc(foodId).get();
+    if (mounted) setState(() => _isFavorite = doc.exists);
   }
 
-  // 2. Toggle Favorite Logic
   void _toggleFavorite() async {
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please login to save items")));
       return;
     }
-
     String foodId = widget.docId ?? widget.foodData['name'];
-    final favRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user!.uid)
-        .collection('favorites')
-        .doc(foodId);
+    final favRef = FirebaseFirestore.instance.collection('users').doc(user!.uid).collection('favorites').doc(foodId);
 
     if (_isFavorite) {
-      // If currently favorite -> Remove it
       await favRef.delete();
       if (mounted) setState(() => _isFavorite = false);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Removed from saved")));
     } else {
-      // If not favorite -> Add it
-      await favRef.set(widget.foodData); // Save the whole food object so we can show it later
+      await favRef.set(widget.foodData);
       if (mounted) setState(() => _isFavorite = true);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Saved to favorites!")));
     }
   }
 
   void _incrementQuantity() => setState(() => _quantity++);
-  void _decrementQuantity() {
-    if (_quantity > 1) setState(() => _quantity--);
-  }
+  void _decrementQuantity() { if (_quantity > 1) setState(() => _quantity--); }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final description = widget.foodData['description'] ?? "No description available.";
-    final culture = widget.foodData['culturalBackdrop'] ?? "A classic local favorite.";
+    final culture = widget.foodData['culturalBackdrop'] ?? "A classic local favorite with rich history.";
     final hygiene = widget.foodData['hygieneGrade'] ?? 'A';
+    // NEW: Get ingredients as list
+    final List<dynamic> ingredients = widget.foodData['ingredients'] ?? ['Secret Recipe'];
     
     Color hygieneColor = hygiene == 'A' ? Colors.green : (hygiene == 'B' ? Colors.orange : Colors.red);
 
@@ -103,19 +77,14 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
         title: const Text("Food Details", style: TextStyle(color: Colors.black, fontSize: 16)),
         centerTitle: true,
         actions: [
-          // 3. The Interactive Heart Button
           IconButton(
-            icon: Icon(
-              _isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: _isFavorite ? Colors.red : Colors.black,
-            ),
+            icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border, color: _isFavorite ? Colors.red : Colors.black),
             onPressed: _toggleFavorite,
           ),
           IconButton(icon: const Icon(Icons.share, color: Colors.black), onPressed: () {}),
         ],
       ),
       
-      // ... (Keep the rest of your UI exactly the same) ...
       body: Column(
         children: [
           Expanded(
@@ -124,31 +93,33 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Image
                   Center(
                     child: Container(
-                      height: 200,
+                      height: 220,
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.brown[50],
+                        borderRadius: BorderRadius.circular(20),
                         image: widget.foodData['imageUrl'] != null && widget.foodData['imageUrl'].isNotEmpty
                           ? DecorationImage(image: NetworkImage(widget.foodData['imageUrl']), fit: BoxFit.cover)
                           : null,
                       ),
                       child: widget.foodData['imageUrl'] == null 
-                          ? const Center(child: Icon(Icons.fastfood, size: 50, color: Colors.grey)) 
+                          ? Center(child: Icon(Icons.fastfood, size: 50, color: Colors.brown[200])) 
                           : null,
                     ),
                   ),
                   const SizedBox(height: 24),
 
+                  // Title & Hygiene
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: Text(
                           widget.foodData['name'] ?? "Food Name",
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                         ),
                       ),
                       Container(
@@ -184,30 +155,44 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  const Text("Description", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  // Description
+                  Text("Description", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.primary)),
                   const SizedBox(height: 8),
                   Text(description, style: TextStyle(color: Colors.grey[600], height: 1.5)),
+                  const SizedBox(height: 24),
+
+                  Text("Ingredients", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.primary)),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    children: ingredients.map((ing) => Chip(
+                      label: Text(ing.toString(), style: TextStyle(color: Colors.brown[900])),
+                      backgroundColor: Colors.orange[50], // Theme Color
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.orange.withOpacity(0.3))),
+                    )).toList(),
+                  ),
                   const SizedBox(height: 24),
 
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.05),
+                      color: Colors.brown.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                      border: Border.all(color: Colors.brown.withOpacity(0.2)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.history_edu, color: Colors.orange[800], size: 20),
+                            Icon(Icons.history_edu, color: theme.colorScheme.primary, size: 20),
                             const SizedBox(width: 8),
-                            Text("Cultural Origin", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange[900])),
+                            Text("Cultural Origin", style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text(culture, style: TextStyle(color: Colors.orange[900], fontSize: 13, fontStyle: FontStyle.italic)),
+                        Text(culture, style: TextStyle(color: Colors.brown[900], fontSize: 13, fontStyle: FontStyle.italic)),
                       ],
                     ),
                   ),
@@ -217,6 +202,7 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
             ),
           ),
 
+          // Bottom Action
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -230,15 +216,15 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text("Total Price", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    Text("RM ${(_basePrice * _quantity).toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    Text("RM ${(_basePrice * _quantity).toStringAsFixed(2)}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: theme.colorScheme.primary)),
                   ],
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
+                    backgroundColor: theme.colorScheme.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () {
                     Navigator.push(
@@ -260,11 +246,11 @@ class _FoodDetailsScreenState extends State<FoodDetailsScreen> {
 
   Widget _buildInfoCard(IconData icon, String label) {
     return Container(
-      width: 90,
+      width: 95,
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(12)),
       child: Column(children: [
-          Icon(icon, size: 20, color: Colors.black54),
+          Icon(icon, size: 20, color: Colors.brown[400]),
           const SizedBox(height: 8),
           Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
       ]),
