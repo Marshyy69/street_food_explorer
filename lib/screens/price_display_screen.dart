@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Import Auth
+import 'home_screen.dart';
 
 class PriceDisplayScreen extends StatelessWidget {
   final Map<String, dynamic> foodData;
@@ -22,28 +25,23 @@ class PriceDisplayScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // --- 1. Calculation Logic ---
-    // Extract base price number (e.g. from "RM 8-12" -> take 10 as average or 8)
+    // --- Calculation Logic ---
     String priceString = foodData['price'] ?? '10';
     double basePricePerPax = double.tryParse(priceString.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 10.0;
     
-    // Adjust base price based on package type
     if (packageType == 'Premium') basePricePerPax += 15;
     if (packageType == 'Full Tour') basePricePerPax += 30;
 
     double subtotalFood = basePricePerPax * participants;
     
-    // Calculate Add-ons
     double addOnTotal = 0;
     if (addTransport) addOnTotal += 30;
     if (addGuide) addOnTotal += 50;
     if (addDessert) addOnTotal += 20;
 
     double subtotal = subtotalFood + addOnTotal;
-    double serviceFee = subtotal * 0.05; // 5% fee
+    double serviceFee = subtotal * 0.05; 
     double grandTotal = subtotal + serviceFee;
-
-    // ----------------------------
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -72,13 +70,13 @@ class PriceDisplayScreen extends StatelessWidget {
                   
                   _buildRow("Package Type", packageType),
                   _buildRow("Participants", "$participants pax"),
-                  _buildRow("Base Price (x$participants)", "RM ${subtotalFood.toStringAsFixed(2)}"),
+                  _buildRow("Base Price", "RM ${subtotalFood.toStringAsFixed(2)}"),
                   
                   if (addOnTotal > 0) ...[
                     const SizedBox(height: 10),
                     const Text("Add-ons:", style: TextStyle(fontWeight: FontWeight.bold)),
                     if (addTransport) _buildRow(" - Transport", "RM 30.00"),
-                    if (addGuide) _buildRow(" - Tour Guide", "RM 50.00"),
+                    if (addGuide) _buildRow(" - Guide", "RM 50.00"),
                     if (addDessert) _buildRow(" - Dessert", "RM 20.00"),
                   ],
 
@@ -90,7 +88,7 @@ class PriceDisplayScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text("TOTAL PAYMENT", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                      const Text("TOTAL", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                       Text("RM ${grandTotal.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.deepOrange)),
                     ],
                   ),
@@ -108,11 +106,65 @@ class PriceDisplayScreen extends StatelessWidget {
                   backgroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 18),
                 ),
-                onPressed: () {
-                  // Here we would save to Firebase (We will do this next)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Booking Confirmed! Saving to database..."))
+                onPressed: () async {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const Center(child: CircularProgressIndicator()),
                   );
+
+                  try {
+                    // 1. Get Current User Info
+                    final user = FirebaseAuth.instance.currentUser;
+                    String userName = 'Unknown User';
+                    String userId = '';
+
+                    if (user != null) {
+                      userId = user.uid;
+                      // Fetch name from Firestore 'users' collection
+                      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+                      if (userDoc.exists) {
+                        userName = userDoc['name'] ?? user.email ?? 'User';
+                      }
+                    }
+
+                    // 2. Save to Firebase with REAL Name
+                    await FirebaseFirestore.instance.collection('bookings').add({
+                      'foodName': foodData['name'] ?? 'Unknown Food',
+                      'customerName': userName, // <--- FIXED
+                      'userId': userId,         // <--- NEW: To filter for "My Bookings"
+                      'participants': participants,
+                      'mealTime': mealTime,
+                      'packageType': packageType,
+                      'extras': {
+                        'transport': addTransport,
+                        'guide': addGuide,
+                        'dessert': addDessert,
+                      },
+                      'totalPrice': grandTotal,
+                      'status': 'Confirmed',
+                      'timestamp': FieldValue.serverTimestamp(),
+                    });
+
+                    if (context.mounted) {
+                      Navigator.pop(context); // Close spinner
+                      
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Booking Successful!"), backgroundColor: Colors.green)
+                      );
+
+                      Navigator.pushAndRemoveUntil(
+                        context, 
+                        MaterialPageRoute(builder: (context) => const HomeScreen()), 
+                        (route) => false
+                      );
+                    }
+                  } catch (e) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red)
+                    );
+                  }
                 },
                 child: const Text("Confirm Booking"),
               ),
