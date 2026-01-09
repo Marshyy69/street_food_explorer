@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "156613201236",
+    "project_id": "street-food-explorer-c22fd",
+    "storage_bucket": "street-food-explorer-c22fd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156613201236:android:109a6582968028e0dfccc1",
+        "android_client_info": {
+          "package_name": "com.example.street_food_explorer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsOsbvrAZMSQ2_uMfxE3e6dOiKHKSINPc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
